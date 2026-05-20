@@ -76,9 +76,7 @@ def main():
   # Two tabs: only one method's prediction can run at a time
   tab_file, tab_url = st.tabs(["📁  Upload File", "🔗  Image URL"])
 
-  # =====================================================================
   # TAB 1 - FILE UPLOAD
-  # =====================================================================
   with tab_file:
     uploaded_file = st.file_uploader("Upload an image",
                                      type=["jpg", "jpeg", "png"],
@@ -108,10 +106,8 @@ def main():
       if st.session_state.active_tab == "file":
         st.session_state.active_tab = None
       st.info("Please upload an image file in this tab.")
-
-  # =====================================================================
+      
   # TAB 2 - IMAGE URL
-  # =====================================================================
   with tab_url:
     url = st.text_input("Enter Image URL:", key="url_input")
 
