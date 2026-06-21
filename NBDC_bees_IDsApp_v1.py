@@ -8,6 +8,7 @@ import tensorflow as tf
 import joblib
 import keras
 import plotly.graph_objects as go
+import os
 
 
 # ----------------------------------------------------------------------------
@@ -16,6 +17,199 @@ import plotly.graph_objects as go
 HONEY = "#F4A300"
 HONEY_DARK = "#C9810A"
 DEEP_BROWN = "#2B1D0E"
+
+# ----------------------------------------------------------------------------
+# GENUS REFERENCE INFO
+# Concise factual summaries compiled from public bee-identification sources
+# (Minnesota Native Bees, Wikipedia, Project Dragonfly, Exotic Bee ID, etc).
+# Edit freely — these are meant as an editable starting point, not final copy.
+# Image files are expected at: images/<Genus>.jpg  (e.g. images/Halictus.jpg)
+# ----------------------------------------------------------------------------
+GENUS_INFO = {
+    "Halictus": (
+        "Halictus, commonly called sweat bees, belong to the family Halictidae "
+        "and include over 200 species found mainly across the Northern "
+        "Hemisphere. They are small to medium-sized, typically dark brown to "
+        "black and sometimes with a metallic green sheen, with pale hair bands "
+        "along the outer edge of each abdominal segment. Most nest in burrows "
+        "in the ground and some species show primitively social behaviour, "
+        "living in small colonies with overlapping generations. They are "
+        "sometimes attracted to human sweat, which gives the group its common name."
+    ),
+    "Lasioglossum": (
+        "Lasioglossum is the largest genus of bees in the world, with well over "
+        "1,800 described species. Members are typically tiny to medium-sized "
+        "and dusky black, brown, dull green, or blue, with hair bands set along "
+        "the inner edge of the abdominal segments rather than the outer edge as "
+        "in the closely related Halictus. Most nest in the ground, and social "
+        "behaviour within the genus is extremely variable, ranging from solitary "
+        "nesting to small eusocial colonies. Because of their small size they are "
+        "often the most overlooked bees in a given habitat despite being among "
+        "the most abundant."
+    ),
+    "Agapostemon": (
+        "Agapostemon, known as metallic green sweat bees, are medium-sized bees "
+        "in the family Halictidae notable for their bright, often brilliant "
+        "metallic green head and thorax. In several species the males have a "
+        "green head and thorax paired with a black-and-yellow striped abdomen, "
+        "making them visually distinctive among native bees. They nest in the "
+        "ground, sometimes in aggregations where many females share a single "
+        "nest entrance while maintaining separate brood cells, and are common, "
+        "easily recognized pollinators across much of North America."
+    ),
+    "Megachile": (
+        "Megachile, the leafcutter bees, belong to the family Megachilidae and "
+        "are recognized by their habit of cutting neat, circular or oval pieces "
+        "from leaves and petals to line and partition their nest cells. They are "
+        "dark gray to black, small to large bees with broad bodies and large "
+        "mandibles used for cutting plant material. Unlike many bees, females "
+        "carry pollen on a dense brush of hair (scopa) on the underside of the "
+        "abdomen rather than on the hind legs. Most species nest in pre-existing "
+        "cavities such as hollow stems, and the introduced alfalfa leafcutter "
+        "bee (Megachile rotundata) is widely managed for crop pollination."
+    ),
+    "Colletes": (
+        "Colletes, commonly called cellophane or plasterer bees, belong to the "
+        "family Colletidae and are medium-sized, densely hairy, ground-nesting "
+        "bees. They take their common name from the thin, cellophane-like "
+        "secretion females apply to line their underground brood cells, which "
+        "waterproofs the nest and helps keep liquid larval provisions from "
+        "leaking out. Many species nest in dense aggregations of individual "
+        "burrows in sandy or bare soil, and some emerge very early in spring, "
+        "making them important early-season pollinators."
+    ),
+    "Melissodes": (
+        "Melissodes, the long-horned bees, are medium-sized bees in the family "
+        "Apidae with robust, broad abdomens. Males are easily recognized by "
+        "their unusually long antennae, while females have long pollen-collecting "
+        "hairs on their hind legs. Most species are pollen specialists on plants "
+        "in the sunflower family (Asteraceae), and they are typically active from "
+        "midsummer into autumn, making them common visitors to late-season "
+        "composite flowers such as sunflowers and asters."
+    ),
+    "Apis": (
+        "Apis is the genus of true honey bees, of which the Western honey bee "
+        "(Apis mellifera) is by far the most familiar and economically important "
+        "species worldwide. Honey bees are medium-sized, golden-brown and black "
+        "bees that live in large, highly organized perennial colonies with a "
+        "single queen, female workers, and seasonal males (drones). Unlike most "
+        "native bees, Apis is eusocial and builds wax comb, storing honey and "
+        "pollen for year-round survival. Managed honey bee colonies are widely "
+        "used for commercial crop pollination in addition to their role as wild "
+        "and feral pollinators."
+    ),
+    "Xeromelecta": (
+        "Xeromelecta is a small genus of cuckoo bees in the family Apidae. Like "
+        "other cuckoo bees, they are kleptoparasites: females do not build their "
+        "own nests or collect pollen, but instead enter the nests of host bees "
+        "(often digger bees in the genus Anthophora) to lay their eggs, with the "
+        "Xeromelecta larva consuming the host's stored pollen provisions. As is "
+        "typical of cuckoo bees, they lack the dense pollen-carrying hairs seen "
+        "in pollen-collecting genera and instead have a sparser, often "
+        "wasp-like appearance."
+    ),
+    "Osmia": (
+        "Osmia, the mason bees, are stocky, often brilliantly metallic blue, "
+        "green, or purple bees in the family Megachilidae. Like leafcutter bees, "
+        "females carry pollen on a scopa beneath the abdomen rather than on the "
+        "hind legs. They are named for their nesting habit of using mud or other "
+        "masticated plant material to construct and seal partitions between "
+        "brood cells, typically within pre-existing cavities such as hollow "
+        "stems or holes in wood. Several Osmia species, including the orchard "
+        "mason bee, are valued and sometimes commercially managed as efficient "
+        "early-spring orchard pollinators."
+    ),
+    "Diadasia": (
+        "Diadasia, sometimes called chimney bees or cactus bees, are robust, "
+        "ground-nesting bees in the family Apidae. Many species build a short "
+        "turret or 'chimney' of soil around their nest entrance, the function of "
+        "which is not fully understood but may help protect the burrow from "
+        "weather or predators. Diadasia are often pollen specialists, with "
+        "different species associated with particular plant groups such as "
+        "mallows, cacti, or globemallows, and they frequently nest in dense "
+        "aggregations in open, sandy ground."
+    ),
+    "Hoplitis": (
+        "Hoplitis, a genus of mason bees in the family Megachilidae, are small "
+        "to medium bees, generally non-metallic apart from a few vividly green "
+        "species. They have light blue-green eyes, a moderately pitted body, and "
+        "white hair bands on the abdomen that are characteristically interrupted "
+        "on the first two segments. Both sexes have a distinctive curling "
+        "(concave) abdomen, and males often have unusual hooked or pointed "
+        "antennae. Females collect pollen on hairs beneath the abdomen and nest "
+        "in pre-existing cavities such as plant stems, lining brood cells with "
+        "chewed leaf material mixed with plant pith."
+    ),
+    "Hylaeus": (
+        "Hylaeus, the masked or yellow-faced bees, are very small, nearly "
+        "hairless bees in the family Colletidae that can be mistaken for small "
+        "wasps. They are best identified by pale yellow or white facial markings, "
+        "which are typically more extensive in males than females. Unusually for "
+        "bees, Hylaeus lack external pollen-carrying hairs altogether; instead, "
+        "females ingest pollen and nectar and carry the mixture internally in "
+        "their crop back to the nest. They nest above ground in narrow, "
+        "pre-existing cavities such as hollow or pith-filled plant stems."
+    ),
+    "Coelioxys": (
+        "Coelioxys, the sharp-tailed cuckoo bees, are kleptoparasites in the "
+        "family Megachilidae that target the nests of leafcutter bees (Megachile) "
+        "and their relatives. Females are recognized by a pointed, cone-shaped "
+        "tip to the abdomen used to lay eggs inside a host's sealed brood cell, "
+        "while males typically have several spines or teeth at the abdomen's "
+        "end. As with other cuckoo bees, Coelioxys do not collect pollen "
+        "themselves and lack scopal hairs, relying instead on the food stores "
+        "left by their unwitting hosts."
+    ),
+    "Bombus": (
+        "Bombus, the bumble bees, are large, robust, densely hairy bees in the "
+        "family Apidae, easily recognized by their bold black-and-yellow (or "
+        "sometimes orange or white) banded coloration. They are eusocial, "
+        "forming annual colonies of a single queen and up to roughly 100 "
+        "workers, often nesting in abandoned rodent burrows, thick grass, or "
+        "other insulated cavities. Bumble bees are capable of 'buzz "
+        "pollination,' vibrating flowers to release pollen that other bees "
+        "cannot access, making them especially important pollinators of crops "
+        "such as tomatoes, blueberries, and many wildflowers."
+    ),
+    "Anthophora": (
+        "Anthophora, commonly called digger bees, are fast-flying, often densely "
+        "hairy bees in the family Apidae that nest in burrows in the ground or "
+        "in soft rock and cliff faces. Many species are notably robust and "
+        "bee-fly-like in flight, hovering rapidly near flowers. Anthophora often "
+        "nest in dense aggregations, and some species favor steep banks or "
+        "vertical soil faces for their burrows. They are generalist or "
+        "near-generalist foragers and frequent visitors to a wide range of "
+        "spring and summer flowers."
+    ),
+    "Anthidium": (
+        "Anthidium, the wool carder bees, are rotund, medium-sized bees in the "
+        "family Megachilidae with distinctive yellow-and-black banded "
+        "coloration that can resemble wasps at a glance. Their common name "
+        "comes from the females' habit of scraping soft hairs ('wool') from the "
+        "leaves of plants such as lamb's ear, which they carry back to line "
+        "their nest cells in pre-existing cavities. Males of several Anthidium "
+        "species are notably territorial, aggressively patrolling and defending "
+        "patches of flowers from other male bees and insects."
+    ),
+    "Andrena": (
+        "Andrena, the mining bees, form one of the largest bee genera with "
+        "well over 1,500 described species worldwide and is especially diverse "
+        "in temperate regions. They are small to medium-sized, often hairy bees, "
+        "typically black or with a dull metallic blue or green cast, and "
+        "females usually carry pollen on dense hairs along the hind legs. "
+        "Andrena are solitary ground-nesters, with each female excavating her "
+        "own burrow, though nests are frequently found in loose aggregations. "
+        "Many species emerge early in spring and are important pollinators of "
+        "early-blooming trees, shrubs, and wildflowers."
+    ),
+}
+
+GENUS_FALLBACK = (
+    "Detailed reference information for this genus hasn't been added yet. "
+    "Check back soon, or contact the NBDC team if you'd like to contribute "
+    "information for this species."
+)
+
 
 
 def get_theme_colors():
@@ -181,7 +375,7 @@ def inject_custom_css(theme):
             }}
 
             /* ================================================================
-               TABS
+               TABS  (st.tabs, used for nothing now but kept for safety)
                ================================================================ */
             .stTabs [data-baseweb="tab-list"] {{
                 gap: 8px;
@@ -197,6 +391,63 @@ def inject_custom_css(theme):
                 background-color: rgba(244,163,0,0.18) !important;
                 color: {theme['accent']} !important;
                 border-bottom: 3px solid {HONEY} !important;
+            }}
+
+            /* ================================================================
+               RADIO-AS-TABS  (st.radio styled to look and feel like tabs,
+               used instead of st.tabs because Streamlit's st.tabs has no
+               way to be switched programmatically from a button click —
+               st.radio's selection CAN be driven via session_state.)
+               ================================================================ */
+            div[role="radiogroup"] {{
+                gap: 8px;
+                border-bottom: 1px solid {theme['card_border']};
+                padding-bottom: 0;
+                margin-bottom: 1rem;
+            }}
+            div[role="radiogroup"] label {{
+                background-color: {theme['tab_hover_bg']};
+                border-radius: 10px 10px 0 0 !important;
+                padding: 10px 22px !important;
+                font-weight: 600;
+                margin-bottom: 0 !important;
+                border-bottom: 3px solid transparent;
+            }}
+            div[role="radiogroup"] label[data-checked="true"],
+            div[role="radiogroup"] label:has(input:checked) {{
+                background-color: rgba(244,163,0,0.18) !important;
+                border-bottom: 3px solid {HONEY} !important;
+            }}
+            div[role="radiogroup"] label:has(input:checked) p {{
+                color: {theme['accent']} !important;
+                font-weight: 700 !important;
+            }}
+            /* Hide the default radio circle so it reads purely as a tab */
+            div[role="radiogroup"] label > div:first-child {{
+                display: none;
+            }}
+
+            /* ================================================================
+               GENUS INFO TAB
+               ================================================================ */
+            .genus-info-card {{
+                background: {theme['card_bg']};
+                border: 1px solid {theme['card_border']};
+                border-radius: 16px;
+                padding: 1.6rem 1.8rem;
+                margin-bottom: 1rem;
+            }}
+            .genus-info-title {{
+                font-family: 'Poppins', sans-serif;
+                font-weight: 700;
+                font-size: 1.8rem;
+                color: {theme['result_genus']} !important;
+                margin-bottom: 0.6rem;
+            }}
+            .genus-info-body {{
+                font-size: 1rem;
+                line-height: 1.7;
+                color: {theme['sidebar_text']} !important;
             }}
 
             /* ================================================================
@@ -312,6 +563,8 @@ def main():
         top_conf = pred_df.loc[top_idx, 'Pred']
 
         # --- Top-result highlight card ---
+        st.session_state.predicted_genus = top_genus
+
         st.markdown(
             f"""
             <div class="result-card">
@@ -322,6 +575,12 @@ def main():
             """,
             unsafe_allow_html=True,
         )
+
+        col_spacer, col_btn, col_spacer2 = st.columns([1, 1.4, 1])
+        with col_btn:
+            if st.button(f"📖 Want to know more about {top_genus}?", key="learn_more_btn", use_container_width=True):
+                st.session_state.section_radio = "📖  Genus Info"
+                st.rerun()
 
         # --- Theme-aware chart colours ---
         text_color = "#FFF8E7" if theme["is_dark"] else "#1A1000"
@@ -456,13 +715,33 @@ def main():
     # --------------------------------------------------------------------
     if "active_tab" not in st.session_state:
         st.session_state.active_tab = None
+    if "predicted_genus" not in st.session_state:
+        st.session_state.predicted_genus = None
 
     st.markdown("### 📤 Choose an upload method")
 
-    tab_file, tab_url = st.tabs(["📁  Upload File", "🔗  Image URL"])
+    section_options = ["📁  Upload File", "🔗  Image URL", "📖  Genus Info"]
+
+    if "section_radio" not in st.session_state:
+        st.session_state.section_radio = section_options[0]
+
+    selected_display = st.radio(
+        "Choose a section",
+        section_options,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="section_radio",
+    )
+
+    if "Upload File" in selected_display:
+        current_section = "Upload File"
+    elif "Image URL" in selected_display:
+        current_section = "Image URL"
+    else:
+        current_section = "Genus Info"
 
     # ---------------- TAB 1 - FILE UPLOAD ----------------
-    with tab_file:
+    if current_section == "Upload File":
         st.markdown("#### Upload an image from your device")
         uploaded_file = st.file_uploader(
             "Drag and drop or browse for a JPG, PNG, or JPEG file",
@@ -500,7 +779,7 @@ def main():
             st.info("👆 Please upload an image file to get started.")
 
     # ---------------- TAB 2 - IMAGE URL ----------------
-    with tab_url:
+    elif current_section == "Image URL":
         st.markdown("#### Provide a direct image URL")
         url = st.text_input("Enter Image URL:", key="url_input", placeholder="https://example.com/bee.jpg")
 
@@ -544,6 +823,33 @@ def main():
             if st.session_state.active_tab == "url":
                 st.session_state.active_tab = None
             st.info("👆 Please enter an image URL to get started.")
+
+    # ---------------- TAB 3 - GENUS INFO ----------------
+    else:
+        genus = st.session_state.predicted_genus
+
+        if not genus:
+            st.info("👆 Run an identification first, then come back here to learn more about your bee's genus.")
+        else:
+            info_text = GENUS_INFO.get(genus, GENUS_FALLBACK)
+            image_path = f"images/{genus}.jpg"
+
+            col_img, col_text = st.columns([1, 1.6])
+            with col_img:
+                if os.path.exists(image_path):
+                    st.image(image_path, caption=genus, use_container_width=True)
+                else:
+                    st.info(f"📷 Add an image at `images/{genus}.jpg` to display it here.")
+            with col_text:
+                st.markdown(
+                    f"""
+                    <div class="genus-info-card">
+                        <div class="genus-info-title">🐝 {genus}</div>
+                        <div class="genus-info-body">{info_text}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
     # --------------------------------------------------------------------
     # Footer
