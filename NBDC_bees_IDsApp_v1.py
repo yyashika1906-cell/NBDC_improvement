@@ -7,7 +7,6 @@ import pandas as pd
 import tensorflow as tf
 import joblib
 import keras
-import plotly.express as px
 import plotly.graph_objects as go
 
 
@@ -17,134 +16,74 @@ import plotly.graph_objects as go
 HONEY = "#F4A300"
 HONEY_DARK = "#C9810A"
 DEEP_BROWN = "#2B1D0E"
-CREAM = "#FFF8E7"
-ACCENT = "#FFD166"
 
 
-def inject_custom_css():
+def get_theme_colors():
+    """Resolve the active Streamlit theme into a dict of literal hex colors.
+
+    We deliberately avoid relying purely on CSS custom-property inheritance
+    for text-bearing elements (sidebar cards, result card, footer) because
+    Streamlit renders different parts of the app into separate DOM subtrees,
+    and custom properties don't always reach every subtree reliably. Instead
+    we resolve the theme once in Python and bake literal colors directly
+    into the HTML/CSS we emit, with !important to win any specificity fights.
+    """
+    is_dark = st.get_option("theme.base") == "dark"
+
+    if is_dark:
+        return {
+            "is_dark": True,
+            "accent": "#FFD166",
+            "card_bg": "rgba(255,255,255,0.06)",
+            "card_border": "rgba(244,163,0,0.30)",
+            "sidebar_text": "#F0F0F0",
+            "sidebar_heading": HONEY,
+            "sidebar_link": HONEY,
+            "result_bg_a": "rgba(244,163,0,0.20)",
+            "result_bg_b": "rgba(244,163,0,0.05)",
+            "result_genus": "#FFF8E7",
+            "result_conf": "#E5E5E5",
+            "footer_color": "#AAAAAA",
+            "tab_hover_bg": "rgba(244,163,0,0.10)",
+        }
+    else:
+        return {
+            "is_dark": False,
+            "accent": "#C9810A",
+            "card_bg": "rgba(244,163,0,0.10)",
+            "card_border": "rgba(200,120,0,0.35)",
+            "sidebar_text": "#2B1D0E",
+            "sidebar_heading": HONEY_DARK,
+            "sidebar_link": HONEY_DARK,
+            "result_bg_a": "rgba(244,163,0,0.16)",
+            "result_bg_b": "rgba(244,163,0,0.04)",
+            "result_genus": "#1A1000",
+            "result_conf": "#3A2800",
+            "footer_color": "#7A6040",
+            "tab_hover_bg": "rgba(244,163,0,0.12)",
+        }
+
+
+def inject_custom_css(theme):
     st.markdown(
         f"""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito+Sans:wght@400;600&display=swap');
 
-            /* ================================================================
-               CSS CUSTOM PROPERTIES — light mode defaults
-               ================================================================ */
-            :root {{
-                --honey:        {HONEY};
-                --honey-dark:   {HONEY_DARK};
-                --accent:       #E08C00;      /* slightly darker for light bg */
-
-                /* surfaces */
-                --card-bg:      rgba(244,163,0,0.07);
-                --card-border:  rgba(200,120,0,0.28);
-                --section-bg:   rgba(244,163,0,0.05);
-
-                /* text */
-                --text-primary:   #1A1000;
-                --text-secondary: #4A3200;
-                --text-muted:     #6B5B3E;
-                --text-on-honey:  #1A1000;
-
-                /* hero  */
-                --hero-grad-a:  #2B1D0E;
-                --hero-grad-b:  #4a2f12;
-                --hero-grad-c:  {HONEY_DARK};
-                --hero-text:    #FFF8E7;
-                --hero-tagline: rgba(255,248,231,0.88);
-                --hero-accent:  {ACCENT};
-
-                /* sidebar */
-                --sidebar-card-bg:     rgba(244,163,0,0.08);
-                --sidebar-card-border: rgba(200,120,0,0.22);
-                --sidebar-text:        #3A2800;
-                --sidebar-link:        {HONEY_DARK};
-
-                /* result card */
-                --result-bg-a:  rgba(244,163,0,0.14);
-                --result-bg-b:  rgba(244,163,0,0.03);
-                --result-genus: #1A1000;
-                --result-conf:  #4A3200;
-
-                /* misc */
-                --footer-color: #7a6040;
-                --tab-hover-bg: rgba(244,163,0,0.10);
-            }}
-
-            /* ================================================================
-               DARK MODE OVERRIDES  (Streamlit sets data-theme="dark" on <html>,
-               and we also respect the OS-level preference as a fallback)
-               ================================================================ */
-            html[data-theme="dark"] {{
-                --accent:          #FFD166;
-
-                --card-bg:         rgba(255,255,255,0.04);
-                --card-border:     rgba(244,163,0,0.25);
-                --section-bg:      rgba(255,255,255,0.03);
-
-                --text-primary:    #FFF8E7;
-                --text-secondary:  #FFD166;
-                --text-muted:      #ccb98a;
-                --text-on-honey:   #1A1000;
-
-                --sidebar-card-bg:     rgba(244,163,0,0.06);
-                --sidebar-card-border: rgba(244,163,0,0.20);
-                --sidebar-text:        #f0f0f0;
-                --sidebar-link:        {HONEY};
-
-                --result-bg-a:  rgba(244,163,0,0.18);
-                --result-bg-b:  rgba(244,163,0,0.04);
-                --result-genus: #FFF8E7;
-                --result-conf:  #ddd;
-
-                --footer-color: #999;
-                --tab-hover-bg: rgba(244,163,0,0.08);
-            }}
-
-            @media (prefers-color-scheme: dark) {{
-                html:not([data-theme="light"]) {{
-                    --accent:          #FFD166;
-
-                    --card-bg:         rgba(255,255,255,0.04);
-                    --card-border:     rgba(244,163,0,0.25);
-                    --section-bg:      rgba(255,255,255,0.03);
-
-                    --text-primary:    #FFF8E7;
-                    --text-secondary:  #FFD166;
-                    --text-muted:      #ccb98a;
-                    --text-on-honey:   #1A1000;
-
-                    --sidebar-card-bg:     rgba(244,163,0,0.06);
-                    --sidebar-card-border: rgba(244,163,0,0.20);
-                    --sidebar-text:        #f0f0f0;
-                    --sidebar-link:        {HONEY};
-
-                    --result-bg-a:  rgba(244,163,0,0.18);
-                    --result-bg-b:  rgba(244,163,0,0.04);
-                    --result-genus: #FFF8E7;
-                    --result-conf:  #ddd;
-
-                    --footer-color: #999;
-                    --tab-hover-bg: rgba(244,163,0,0.08);
-                }}
-            }}
-
-            /* ================================================================
-               BASE
-               ================================================================ */
             html, body, [class*="css"] {{
                 font-family: 'Nunito Sans', sans-serif;
             }}
 
             /* ================================================================
                HERO BANNER  — always dark-on-photo so text stays readable
+               regardless of site theme
                ================================================================ */
             .hero-banner {{
                 background: linear-gradient(
                     135deg,
-                    var(--hero-grad-a) 0%,
-                    var(--hero-grad-b) 55%,
-                    var(--hero-grad-c) 100%
+                    #2B1D0E 0%,
+                    #4a2f12 55%,
+                    {HONEY_DARK} 100%
                 );
                 border-radius: 18px;
                 padding: 2.5rem 2.5rem 2rem 2.5rem;
@@ -165,7 +104,7 @@ def inject_custom_css():
                 font-family: 'Poppins', sans-serif;
                 font-weight: 700;
                 font-size: 2.6rem;
-                color: var(--hero-text);
+                color: #FFF8E7 !important;
                 margin-bottom: 0.25rem;
                 letter-spacing: 0.5px;
             }}
@@ -173,12 +112,12 @@ def inject_custom_css():
                 font-family: 'Poppins', sans-serif;
                 font-weight: 600;
                 font-size: 1.1rem;
-                color: var(--hero-accent);
+                color: #FFD166 !important;
                 margin-bottom: 0.5rem;
                 letter-spacing: 0.5px;
             }}
             .hero-tagline {{
-                color: var(--hero-tagline);
+                color: rgba(255,248,231,0.88) !important;
                 font-size: 0.97rem;
                 max-width: 640px;
                 line-height: 1.55;
@@ -188,18 +127,18 @@ def inject_custom_css():
                SIDEBAR CARDS
                ================================================================ */
             section[data-testid="stSidebar"] {{
-                border-right: 1px solid var(--card-border);
+                border-right: 1px solid {theme['card_border']};
             }}
             .sidebar-card {{
-                background: var(--sidebar-card-bg);
-                border: 1px solid var(--sidebar-card-border);
+                background: {theme['card_bg']};
+                border: 1px solid {theme['card_border']};
                 border-radius: 12px;
                 padding: 0.9rem 1rem;
                 margin-bottom: 0.9rem;
             }}
             .sidebar-card h5 {{
                 font-family: 'Poppins', sans-serif;
-                color: var(--honey);
+                color: {theme['sidebar_heading']} !important;
                 margin: 0 0 0.45rem 0;
                 font-size: 0.9rem;
                 font-weight: 700;
@@ -210,10 +149,10 @@ def inject_custom_css():
             .sidebar-card li {{
                 font-size: 0.88rem;
                 line-height: 1.5rem;
-                color: var(--sidebar-text);
+                color: {theme['sidebar_text']} !important;
             }}
             .sidebar-card a {{
-                color: var(--sidebar-link);
+                color: {theme['sidebar_link']} !important;
                 text-decoration: none;
                 font-weight: 600;
             }}
@@ -228,7 +167,7 @@ def inject_custom_css():
                 gap: 8px;
             }}
             .stTabs [data-baseweb="tab"] {{
-                background-color: var(--tab-hover-bg);
+                background-color: {theme['tab_hover_bg']};
                 border-radius: 10px 10px 0 0;
                 padding: 10px 22px;
                 font-weight: 600;
@@ -236,8 +175,8 @@ def inject_custom_css():
             }}
             .stTabs [aria-selected="true"] {{
                 background-color: rgba(244,163,0,0.18) !important;
-                color: var(--accent) !important;
-                border-bottom: 3px solid var(--honey) !important;
+                color: {theme['accent']} !important;
+                border-bottom: 3px solid {HONEY} !important;
             }}
 
             /* ================================================================
@@ -245,7 +184,7 @@ def inject_custom_css():
                ================================================================ */
             div.stButton > button {{
                 background: linear-gradient(135deg, {HONEY} 0%, {HONEY_DARK} 100%);
-                color: {DEEP_BROWN};
+                color: {DEEP_BROWN} !important;
                 font-weight: 700;
                 border: none;
                 border-radius: 10px;
@@ -256,7 +195,7 @@ def inject_custom_css():
             div.stButton > button:hover {{
                 transform: translateY(-2px);
                 box-shadow: 0 5px 16px rgba(244,163,0,0.45);
-                color: {DEEP_BROWN};
+                color: {DEEP_BROWN} !important;
             }}
 
             /* ================================================================
@@ -265,8 +204,8 @@ def inject_custom_css():
             .result-card {{
                 background: linear-gradient(
                     135deg,
-                    var(--result-bg-a) 0%,
-                    var(--result-bg-b) 100%
+                    {theme['result_bg_a']} 0%,
+                    {theme['result_bg_b']} 100%
                 );
                 border: 1px solid rgba(244,163,0,0.40);
                 border-radius: 14px;
@@ -278,7 +217,7 @@ def inject_custom_css():
                 font-size: 0.85rem;
                 text-transform: uppercase;
                 letter-spacing: 1.8px;
-                color: var(--accent);
+                color: {theme['accent']} !important;
                 font-weight: 700;
                 margin-bottom: 0.35rem;
             }}
@@ -286,15 +225,15 @@ def inject_custom_css():
                 font-family: 'Poppins', sans-serif;
                 font-size: 2.2rem;
                 font-weight: 700;
-                color: var(--result-genus);
+                color: {theme['result_genus']} !important;
                 margin-bottom: 0.25rem;
             }}
             .result-card .confidence {{
                 font-size: 1.05rem;
-                color: var(--result-conf);
+                color: {theme['result_conf']} !important;
             }}
             .result-card .confidence strong {{
-                color: var(--honey);
+                color: {HONEY} !important;
             }}
 
             /* ================================================================
@@ -303,13 +242,13 @@ def inject_custom_css():
             .app-footer {{
                 margin-top: 3rem;
                 padding-top: 1.2rem;
-                border-top: 1px solid var(--card-border);
+                border-top: 1px solid {theme['card_border']};
                 text-align: center;
                 font-size: 0.85rem;
-                color: var(--footer-color);
+                color: {theme['footer_color']} !important;
             }}
             .app-footer a {{
-                color: var(--honey);
+                color: {HONEY} !important;
                 font-weight: 600;
                 text-decoration: none;
             }}
@@ -320,6 +259,8 @@ def inject_custom_css():
 
 
 def main():
+    theme = get_theme_colors()
+
     # --------------------------------------------------------------------
     # Img preprocessing
     # --------------------------------------------------------------------
@@ -362,12 +303,11 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # --- Detect light/dark mode for chart colours ---
-        is_dark = st.get_option("theme.base") == "dark"
-        text_color   = "#FFF8E7" if is_dark else "#1A1000"
-        grid_color   = "rgba(255,255,255,0.07)" if is_dark else "rgba(0,0,0,0.07)"
-        bar_low      = "#7a4f14" if is_dark else "#f5d8a0"
-        bar_high     = HONEY
+        # --- Theme-aware chart colours ---
+        text_color = "#FFF8E7" if theme["is_dark"] else "#1A1000"
+        grid_color = "rgba(255,255,255,0.07)" if theme["is_dark"] else "rgba(0,0,0,0.07)"
+        bar_low = "#7a4f14" if theme["is_dark"] else "#f5d8a0"
+        bar_high = HONEY
 
         fig = go.Figure(
             go.Bar(
@@ -427,7 +367,7 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    inject_custom_css()
+    inject_custom_css(theme)
 
     # --------------------------------------------------------------------
     # Hero header
