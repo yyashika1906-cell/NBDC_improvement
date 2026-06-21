@@ -125,27 +125,26 @@ def inject_custom_css(theme):
 
             /* ================================================================
                SIDEBAR CARDS
-               Fixed, self-contained color surface (like the hero banner) so
-               readability never depends on detecting the page's light/dark
-               mode — the card brings its own background AND its own text
-               color together, guaranteeing contrast either way.
+               Fixed, self-contained LIGHT cream surface with dark text —
+               stays the same warm cream box in both light and dark site
+               themes, exactly like the reference design.
                ================================================================ */
             section[data-testid="stSidebar"] {{
                 border-right: 1px solid rgba(244,163,0,0.30);
             }}
             .sidebar-card {{
-                background: linear-gradient(135deg, #3a2710 0%, #2B1D0E 100%);
-                border: 1px solid rgba(244,163,0,0.35);
+                background: linear-gradient(135deg, #FDF3E1 0%, #FBEAD0 100%);
+                border: 1px solid rgba(200,120,0,0.30);
                 border-radius: 12px;
                 padding: 0.9rem 1rem;
                 margin-bottom: 0.9rem;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             }}
             section[data-testid="stSidebar"] .sidebar-card h5,
             .sidebar-card h5 {{
                 font-family: 'Poppins', sans-serif;
-                color: #FFD166 !important;
-                -webkit-text-fill-color: #FFD166 !important;
+                color: {HONEY_DARK} !important;
+                -webkit-text-fill-color: {HONEY_DARK} !important;
                 margin: 0 0 0.45rem 0;
                 font-size: 0.9rem;
                 font-weight: 700;
@@ -162,18 +161,18 @@ def inject_custom_css(theme):
             .sidebar-card ul {{
                 font-size: 0.88rem !important;
                 line-height: 1.5rem !important;
-                color: #F5EDE0 !important;
-                -webkit-text-fill-color: #F5EDE0 !important;
+                color: #2B1D0E !important;
+                -webkit-text-fill-color: #2B1D0E !important;
             }}
             section[data-testid="stSidebar"] .sidebar-card strong,
             .sidebar-card strong {{
-                color: #FFF8E7 !important;
-                -webkit-text-fill-color: #FFF8E7 !important;
+                color: #1A1000 !important;
+                -webkit-text-fill-color: #1A1000 !important;
             }}
             section[data-testid="stSidebar"] .sidebar-card a,
             .sidebar-card a {{
-                color: #FFD166 !important;
-                -webkit-text-fill-color: #FFD166 !important;
+                color: {HONEY_DARK} !important;
+                -webkit-text-fill-color: {HONEY_DARK} !important;
                 text-decoration: none;
                 font-weight: 600;
             }}
