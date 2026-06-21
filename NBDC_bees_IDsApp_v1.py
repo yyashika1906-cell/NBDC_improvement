@@ -72,11 +72,37 @@ def inject_custom_css():
             }}
 
             /* ================================================================
-               DARK MODE OVERRIDES  (Streamlit sets data-theme="dark" on <html>)
+               DARK MODE OVERRIDES  (Streamlit sets data-theme="dark" on <html>,
+               and we also respect the OS-level preference as a fallback)
                ================================================================ */
-            [data-theme="dark"],
+            html[data-theme="dark"] {{
+                --accent:          #FFD166;
+
+                --card-bg:         rgba(255,255,255,0.04);
+                --card-border:     rgba(244,163,0,0.25);
+                --section-bg:      rgba(255,255,255,0.03);
+
+                --text-primary:    #FFF8E7;
+                --text-secondary:  #FFD166;
+                --text-muted:      #ccb98a;
+                --text-on-honey:   #1A1000;
+
+                --sidebar-card-bg:     rgba(244,163,0,0.06);
+                --sidebar-card-border: rgba(244,163,0,0.20);
+                --sidebar-text:        #f0f0f0;
+                --sidebar-link:        {HONEY};
+
+                --result-bg-a:  rgba(244,163,0,0.18);
+                --result-bg-b:  rgba(244,163,0,0.04);
+                --result-genus: #FFF8E7;
+                --result-conf:  #ddd;
+
+                --footer-color: #999;
+                --tab-hover-bg: rgba(244,163,0,0.08);
+            }}
+
             @media (prefers-color-scheme: dark) {{
-                :root {{
+                html:not([data-theme="light"]) {{
                     --accent:          #FFD166;
 
                     --card-bg:         rgba(255,255,255,0.04);
@@ -90,7 +116,7 @@ def inject_custom_css():
 
                     --sidebar-card-bg:     rgba(244,163,0,0.06);
                     --sidebar-card-border: rgba(244,163,0,0.20);
-                    --sidebar-text:        #ddd;
+                    --sidebar-text:        #f0f0f0;
                     --sidebar-link:        {HONEY};
 
                     --result-bg-a:  rgba(244,163,0,0.18);
@@ -156,17 +182,6 @@ def inject_custom_css():
                 font-size: 0.97rem;
                 max-width: 640px;
                 line-height: 1.55;
-            }}
-
-            /* ================================================================
-               SECTION CARD  (tab content wrapper)
-               ================================================================ */
-            .section-card {{
-                background: var(--section-bg);
-                border: 1px solid var(--card-border);
-                border-radius: 14px;
-                padding: 1.4rem 1.6rem;
-                margin-bottom: 1.2rem;
             }}
 
             /* ================================================================
@@ -488,7 +503,6 @@ def main():
 
     # ---------------- TAB 1 - FILE UPLOAD ----------------
     with tab_file:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("#### Upload an image from your device")
         uploaded_file = st.file_uploader(
             "Drag and drop or browse for a JPG, PNG, or JPEG file",
@@ -524,11 +538,9 @@ def main():
             if st.session_state.active_tab == "file":
                 st.session_state.active_tab = None
             st.info("👆 Please upload an image file to get started.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # ---------------- TAB 2 - IMAGE URL ----------------
     with tab_url:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("#### Provide a direct image URL")
         url = st.text_input("Enter Image URL:", key="url_input", placeholder="https://example.com/bee.jpg")
 
@@ -572,7 +584,6 @@ def main():
             if st.session_state.active_tab == "url":
                 st.session_state.active_tab = None
             st.info("👆 Please enter an image URL to get started.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # --------------------------------------------------------------------
     # Footer
