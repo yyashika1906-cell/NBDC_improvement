@@ -27,98 +27,193 @@ def inject_custom_css():
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito+Sans:wght@400;600&display=swap');
 
+            /* ================================================================
+               CSS CUSTOM PROPERTIES — light mode defaults
+               ================================================================ */
+            :root {{
+                --honey:        {HONEY};
+                --honey-dark:   {HONEY_DARK};
+                --accent:       #E08C00;      /* slightly darker for light bg */
+
+                /* surfaces */
+                --card-bg:      rgba(244,163,0,0.07);
+                --card-border:  rgba(200,120,0,0.28);
+                --section-bg:   rgba(244,163,0,0.05);
+
+                /* text */
+                --text-primary:   #1A1000;
+                --text-secondary: #4A3200;
+                --text-muted:     #6B5B3E;
+                --text-on-honey:  #1A1000;
+
+                /* hero  */
+                --hero-grad-a:  #2B1D0E;
+                --hero-grad-b:  #4a2f12;
+                --hero-grad-c:  {HONEY_DARK};
+                --hero-text:    #FFF8E7;
+                --hero-tagline: rgba(255,248,231,0.88);
+                --hero-accent:  {ACCENT};
+
+                /* sidebar */
+                --sidebar-card-bg:     rgba(244,163,0,0.08);
+                --sidebar-card-border: rgba(200,120,0,0.22);
+                --sidebar-text:        #3A2800;
+                --sidebar-link:        {HONEY_DARK};
+
+                /* result card */
+                --result-bg-a:  rgba(244,163,0,0.14);
+                --result-bg-b:  rgba(244,163,0,0.03);
+                --result-genus: #1A1000;
+                --result-conf:  #4A3200;
+
+                /* misc */
+                --footer-color: #7a6040;
+                --tab-hover-bg: rgba(244,163,0,0.10);
+            }}
+
+            /* ================================================================
+               DARK MODE OVERRIDES  (Streamlit sets data-theme="dark" on <html>)
+               ================================================================ */
+            [data-theme="dark"],
+            @media (prefers-color-scheme: dark) {{
+                :root {{
+                    --accent:          #FFD166;
+
+                    --card-bg:         rgba(255,255,255,0.04);
+                    --card-border:     rgba(244,163,0,0.25);
+                    --section-bg:      rgba(255,255,255,0.03);
+
+                    --text-primary:    #FFF8E7;
+                    --text-secondary:  #FFD166;
+                    --text-muted:      #ccb98a;
+                    --text-on-honey:   #1A1000;
+
+                    --sidebar-card-bg:     rgba(244,163,0,0.06);
+                    --sidebar-card-border: rgba(244,163,0,0.20);
+                    --sidebar-text:        #ddd;
+                    --sidebar-link:        {HONEY};
+
+                    --result-bg-a:  rgba(244,163,0,0.18);
+                    --result-bg-b:  rgba(244,163,0,0.04);
+                    --result-genus: #FFF8E7;
+                    --result-conf:  #ddd;
+
+                    --footer-color: #999;
+                    --tab-hover-bg: rgba(244,163,0,0.08);
+                }}
+            }}
+
+            /* ================================================================
+               BASE
+               ================================================================ */
             html, body, [class*="css"] {{
                 font-family: 'Nunito Sans', sans-serif;
             }}
 
-            /* ---- Hero banner ---- */
+            /* ================================================================
+               HERO BANNER  — always dark-on-photo so text stays readable
+               ================================================================ */
             .hero-banner {{
-                background: linear-gradient(135deg, {DEEP_BROWN} 0%, #4a2f12 60%, {HONEY_DARK} 100%);
+                background: linear-gradient(
+                    135deg,
+                    var(--hero-grad-a) 0%,
+                    var(--hero-grad-b) 55%,
+                    var(--hero-grad-c) 100%
+                );
                 border-radius: 18px;
                 padding: 2.5rem 2.5rem 2rem 2.5rem;
                 margin-bottom: 1.5rem;
-                box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+                box-shadow: 0 6px 24px rgba(0,0,0,0.30);
                 position: relative;
                 overflow: hidden;
             }}
             .hero-banner::after {{
                 content: "";
                 position: absolute;
-                right: -40px;
-                top: -40px;
-                width: 220px;
-                height: 220px;
-                background: radial-gradient(circle, rgba(244,163,0,0.35) 0%, rgba(244,163,0,0) 70%);
+                right: -40px; top: -40px;
+                width: 220px; height: 220px;
+                background: radial-gradient(circle, rgba(244,163,0,0.30) 0%, rgba(244,163,0,0) 70%);
                 border-radius: 50%;
             }}
             .hero-title {{
                 font-family: 'Poppins', sans-serif;
                 font-weight: 700;
                 font-size: 2.6rem;
-                color: {CREAM};
+                color: var(--hero-text);
                 margin-bottom: 0.25rem;
                 letter-spacing: 0.5px;
             }}
             .hero-subtitle {{
                 font-family: 'Poppins', sans-serif;
                 font-weight: 600;
-                font-size: 1.25rem;
-                color: {ACCENT};
+                font-size: 1.1rem;
+                color: var(--hero-accent);
                 margin-bottom: 0.5rem;
+                letter-spacing: 0.5px;
             }}
             .hero-tagline {{
-                color: {CREAM};
-                opacity: 0.85;
-                font-size: 0.98rem;
+                color: var(--hero-tagline);
+                font-size: 0.97rem;
                 max-width: 640px;
+                line-height: 1.55;
             }}
 
-            /* ---- Section card ---- */
+            /* ================================================================
+               SECTION CARD  (tab content wrapper)
+               ================================================================ */
             .section-card {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid rgba(244,163,0,0.25);
+                background: var(--section-bg);
+                border: 1px solid var(--card-border);
                 border-radius: 14px;
                 padding: 1.4rem 1.6rem;
                 margin-bottom: 1.2rem;
             }}
-            .section-card h4 {{
-                font-family: 'Poppins', sans-serif;
-                color: {ACCENT};
-                margin-top: 0;
-                margin-bottom: 0.6rem;
-            }}
 
-            /* ---- Sidebar ---- */
+            /* ================================================================
+               SIDEBAR CARDS
+               ================================================================ */
             section[data-testid="stSidebar"] {{
-                border-right: 1px solid rgba(244,163,0,0.15);
+                border-right: 1px solid var(--card-border);
             }}
             .sidebar-card {{
-                background: rgba(244,163,0,0.06);
-                border: 1px solid rgba(244,163,0,0.2);
+                background: var(--sidebar-card-bg);
+                border: 1px solid var(--sidebar-card-border);
                 border-radius: 12px;
                 padding: 0.9rem 1rem;
                 margin-bottom: 0.9rem;
             }}
             .sidebar-card h5 {{
                 font-family: 'Poppins', sans-serif;
-                color: {HONEY};
-                margin: 0 0 0.4rem 0;
-                font-size: 0.95rem;
+                color: var(--honey);
+                margin: 0 0 0.45rem 0;
+                font-size: 0.9rem;
+                font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.6px;
+                letter-spacing: 0.8px;
             }}
-            .sidebar-card p, .sidebar-card li {{
+            .sidebar-card p,
+            .sidebar-card li {{
                 font-size: 0.88rem;
-                line-height: 1.45rem;
-                color: #ddd;
+                line-height: 1.5rem;
+                color: var(--sidebar-text);
+            }}
+            .sidebar-card a {{
+                color: var(--sidebar-link);
+                text-decoration: none;
+                font-weight: 600;
+            }}
+            .sidebar-card a:hover {{
+                text-decoration: underline;
             }}
 
-            /* ---- Tabs ---- */
+            /* ================================================================
+               TABS
+               ================================================================ */
             .stTabs [data-baseweb="tab-list"] {{
                 gap: 8px;
             }}
             .stTabs [data-baseweb="tab"] {{
-                background-color: rgba(255,255,255,0.03);
+                background-color: var(--tab-hover-bg);
                 border-radius: 10px 10px 0 0;
                 padding: 10px 22px;
                 font-weight: 600;
@@ -126,11 +221,13 @@ def inject_custom_css():
             }}
             .stTabs [aria-selected="true"] {{
                 background-color: rgba(244,163,0,0.18) !important;
-                color: {ACCENT} !important;
-                border-bottom: 3px solid {HONEY} !important;
+                color: var(--accent) !important;
+                border-bottom: 3px solid var(--honey) !important;
             }}
 
-            /* ---- Buttons ---- */
+            /* ================================================================
+               PREDICT BUTTON
+               ================================================================ */
             div.stButton > button {{
                 background: linear-gradient(135deg, {HONEY} 0%, {HONEY_DARK} 100%);
                 color: {DEEP_BROWN};
@@ -139,53 +236,66 @@ def inject_custom_css():
                 border-radius: 10px;
                 padding: 0.55rem 1.4rem;
                 transition: transform 0.08s ease-in-out, box-shadow 0.15s;
-                box-shadow: 0 2px 8px rgba(244,163,0,0.25);
+                box-shadow: 0 2px 8px rgba(244,163,0,0.30);
             }}
             div.stButton > button:hover {{
-                transform: translateY(-1px);
-                box-shadow: 0 4px 14px rgba(244,163,0,0.4);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 16px rgba(244,163,0,0.45);
                 color: {DEEP_BROWN};
             }}
 
-            /* ---- Result highlight card ---- */
+            /* ================================================================
+               RESULT CARD
+               ================================================================ */
             .result-card {{
-                background: linear-gradient(135deg, rgba(244,163,0,0.18) 0%, rgba(244,163,0,0.04) 100%);
-                border: 1px solid rgba(244,163,0,0.4);
+                background: linear-gradient(
+                    135deg,
+                    var(--result-bg-a) 0%,
+                    var(--result-bg-b) 100%
+                );
+                border: 1px solid rgba(244,163,0,0.40);
                 border-radius: 14px;
-                padding: 1.4rem 1.6rem;
+                padding: 1.5rem 1.8rem;
                 margin: 1rem 0 1.4rem 0;
                 text-align: center;
             }}
             .result-card .label {{
-                font-size: 0.9rem;
+                font-size: 0.85rem;
                 text-transform: uppercase;
-                letter-spacing: 1.5px;
-                color: {ACCENT};
-                margin-bottom: 0.3rem;
+                letter-spacing: 1.8px;
+                color: var(--accent);
+                font-weight: 700;
+                margin-bottom: 0.35rem;
             }}
             .result-card .genus {{
                 font-family: 'Poppins', sans-serif;
                 font-size: 2.2rem;
                 font-weight: 700;
-                color: {CREAM};
-                margin-bottom: 0.2rem;
+                color: var(--result-genus);
+                margin-bottom: 0.25rem;
             }}
             .result-card .confidence {{
                 font-size: 1.05rem;
-                color: #ddd;
+                color: var(--result-conf);
+            }}
+            .result-card .confidence strong {{
+                color: var(--honey);
             }}
 
-            /* ---- Footer ---- */
+            /* ================================================================
+               FOOTER
+               ================================================================ */
             .app-footer {{
                 margin-top: 3rem;
                 padding-top: 1.2rem;
-                border-top: 1px solid rgba(244,163,0,0.15);
+                border-top: 1px solid var(--card-border);
                 text-align: center;
                 font-size: 0.85rem;
-                color: #999;
+                color: var(--footer-color);
             }}
             .app-footer a {{
-                color: {HONEY};
+                color: var(--honey);
+                font-weight: 600;
                 text-decoration: none;
             }}
         </style>
@@ -237,8 +347,12 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # --- Styled horizontal bar chart ---
-        colors = [HONEY if g != top_genus else HONEY_DARK for g in pred_df['Genus']]
+        # --- Detect light/dark mode for chart colours ---
+        is_dark = st.get_option("theme.base") == "dark"
+        text_color   = "#FFF8E7" if is_dark else "#1A1000"
+        grid_color   = "rgba(255,255,255,0.07)" if is_dark else "rgba(0,0,0,0.07)"
+        bar_low      = "#7a4f14" if is_dark else "#f5d8a0"
+        bar_high     = HONEY
 
         fig = go.Figure(
             go.Bar(
@@ -247,24 +361,30 @@ def main():
                 orientation='h',
                 marker=dict(
                     color=pred_df['Pred'],
-                    colorscale=[[0, "#5a3d12"], [1, HONEY]],
+                    colorscale=[[0, bar_low], [1, bar_high]],
                 ),
                 text=[f"{v:.1f}%" for v in pred_df['Pred']],
                 textposition='outside',
+                textfont=dict(color=text_color, size=12),
                 hovertemplate="%{y}: %{x:.2f}%<extra></extra>",
             )
         )
         fig.update_layout(
             title="Prediction Confidence by Genus",
-            title_font=dict(family="Poppins, sans-serif", size=18, color=CREAM),
+            title_font=dict(family="Poppins, sans-serif", size=18, color=text_color),
             xaxis_title="Probability (%)",
             yaxis_title="",
             height=520,
-            margin=dict(l=10, r=40, t=60, b=40),
+            margin=dict(l=10, r=55, t=60, b=40),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#ddd"),
-            xaxis=dict(gridcolor="rgba(255,255,255,0.07)", range=[0, max(100, pred_df['Pred'].max() * 1.15)]),
+            font=dict(color=text_color),
+            xaxis=dict(
+                gridcolor=grid_color,
+                range=[0, max(100, pred_df['Pred'].max() * 1.18)],
+                color=text_color,
+            ),
+            yaxis=dict(color=text_color),
         )
         st.plotly_chart(fig, use_container_width=True)
 
