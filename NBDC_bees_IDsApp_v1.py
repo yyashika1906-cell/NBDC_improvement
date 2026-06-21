@@ -133,12 +133,12 @@ def inject_custom_css(theme):
                 border-right: 1px solid rgba(244,163,0,0.30);
             }}
             .sidebar-card {{
-                background: linear-gradient(135deg, #FDF3E1 0%, #FBEAD0 100%);
-                border: 1px solid rgba(200,120,0,0.30);
+                background: #F7F0E4;
+                border: 1px solid rgba(200,120,0,0.22);
                 border-radius: 12px;
                 padding: 0.9rem 1rem;
                 margin-bottom: 0.9rem;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                box-shadow: 0 2px 10px rgba(0,0,0,0.06);
             }}
             section[data-testid="stSidebar"] .sidebar-card h5,
             .sidebar-card h5 {{
