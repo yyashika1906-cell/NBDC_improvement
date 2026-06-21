@@ -125,34 +125,55 @@ def inject_custom_css(theme):
 
             /* ================================================================
                SIDEBAR CARDS
+               Fixed, self-contained color surface (like the hero banner) so
+               readability never depends on detecting the page's light/dark
+               mode — the card brings its own background AND its own text
+               color together, guaranteeing contrast either way.
                ================================================================ */
             section[data-testid="stSidebar"] {{
-                border-right: 1px solid {theme['card_border']};
+                border-right: 1px solid rgba(244,163,0,0.30);
             }}
             .sidebar-card {{
-                background: {theme['card_bg']};
-                border: 1px solid {theme['card_border']};
+                background: linear-gradient(135deg, #3a2710 0%, #2B1D0E 100%);
+                border: 1px solid rgba(244,163,0,0.35);
                 border-radius: 12px;
                 padding: 0.9rem 1rem;
                 margin-bottom: 0.9rem;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.18);
             }}
+            section[data-testid="stSidebar"] .sidebar-card h5,
             .sidebar-card h5 {{
                 font-family: 'Poppins', sans-serif;
-                color: {theme['sidebar_heading']} !important;
+                color: #FFD166 !important;
+                -webkit-text-fill-color: #FFD166 !important;
                 margin: 0 0 0.45rem 0;
                 font-size: 0.9rem;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.8px;
             }}
+            section[data-testid="stSidebar"] .sidebar-card p,
+            section[data-testid="stSidebar"] .sidebar-card li,
+            section[data-testid="stSidebar"] div.sidebar-card p,
+            section[data-testid="stSidebar"] div.sidebar-card li,
             .sidebar-card p,
-            .sidebar-card li {{
-                font-size: 0.88rem;
-                line-height: 1.5rem;
-                color: {theme['sidebar_text']} !important;
+            .sidebar-card li,
+            .sidebar-card ol,
+            .sidebar-card ul {{
+                font-size: 0.88rem !important;
+                line-height: 1.5rem !important;
+                color: #F5EDE0 !important;
+                -webkit-text-fill-color: #F5EDE0 !important;
             }}
+            section[data-testid="stSidebar"] .sidebar-card strong,
+            .sidebar-card strong {{
+                color: #FFF8E7 !important;
+                -webkit-text-fill-color: #FFF8E7 !important;
+            }}
+            section[data-testid="stSidebar"] .sidebar-card a,
             .sidebar-card a {{
-                color: {theme['sidebar_link']} !important;
+                color: #FFD166 !important;
+                -webkit-text-fill-color: #FFD166 !important;
                 text-decoration: none;
                 font-weight: 600;
             }}
