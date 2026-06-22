@@ -576,11 +576,17 @@ def main():
             unsafe_allow_html=True,
         )
 
+        def go_to_genus_tab():
+            st.session_state.active_section_idx = 2  # index of "📖  Genus Info"
+
         col_spacer, col_btn, col_spacer2 = st.columns([1, 1.4, 1])
         with col_btn:
-            if st.button(f"📖 Want to know more about {top_genus}?", key="learn_more_btn", use_container_width=True):
-                st.session_state.section_radio = "📖  Genus Info"
-                st.rerun()
+            st.button(
+                f"📖 Want to know more about {top_genus}?",
+                key="learn_more_btn",
+                on_click=go_to_genus_tab,
+                use_container_width=True,
+            )
 
         # --- Theme-aware chart colours ---
         text_color = "#FFF8E7" if theme["is_dark"] else "#1A1000"
@@ -717,21 +723,23 @@ def main():
         st.session_state.active_tab = None
     if "predicted_genus" not in st.session_state:
         st.session_state.predicted_genus = None
+    if "active_section_idx" not in st.session_state:
+        st.session_state.active_section_idx = 0
 
     st.markdown("### 📤 Choose an upload method")
 
     section_options = ["📁  Upload File", "🔗  Image URL", "📖  Genus Info"]
 
-    if "section_radio" not in st.session_state:
-        st.session_state.section_radio = section_options[0]
-
     selected_display = st.radio(
         "Choose a section",
         section_options,
+        index=st.session_state.active_section_idx,
         horizontal=True,
         label_visibility="collapsed",
-        key="section_radio",
     )
+
+    # Update index based on what user manually clicked
+    st.session_state.active_section_idx = section_options.index(selected_display)
 
     if "Upload File" in selected_display:
         current_section = "Upload File"
