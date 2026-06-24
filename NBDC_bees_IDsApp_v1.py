@@ -11,20 +11,14 @@ import plotly.graph_objects as go
 import os
 
 
-# ----------------------------------------------------------------------------
+
 # THEME / COLOUR PALETTE
-# ----------------------------------------------------------------------------
 HONEY = "#F4A300"
 HONEY_DARK = "#C9810A"
 DEEP_BROWN = "#2B1D0E"
 
-# ----------------------------------------------------------------------------
+
 # GENUS REFERENCE INFO
-# Concise factual summaries compiled from public bee-identification sources
-# (Minnesota Native Bees, Wikipedia, Project Dragonfly, Exotic Bee ID, etc).
-# Edit freely — these are meant as an editable starting point, not final copy.
-# Image files are expected at: images/<Genus>.jpg  (e.g. images/Halictus.jpg)
-# ----------------------------------------------------------------------------
 GENUS_INFO = {
     "Halictus": (
         "Halictus, commonly called sweat bees, belong to the family Halictidae "
@@ -268,10 +262,7 @@ def inject_custom_css(theme):
                 font-family: 'Nunito Sans', sans-serif;
             }}
 
-            /* ================================================================
-               HERO BANNER  — always dark-on-photo so text stays readable
-               regardless of site theme
-               ================================================================ */
+            /* HERO BANNER  */
             .hero-banner {{
                 background: linear-gradient(
                     135deg,
@@ -317,12 +308,7 @@ def inject_custom_css(theme):
                 line-height: 1.55;
             }}
 
-            /* ================================================================
-               SIDEBAR CARDS
-               Fixed, self-contained LIGHT cream surface with dark text —
-               stays the same warm cream box in both light and dark site
-               themes, exactly like the reference design.
-               ================================================================ */
+            /* SIDEBAR CARDS */
             section[data-testid="stSidebar"] {{
                 border-right: 1px solid rgba(244,163,0,0.30);
             }}
@@ -374,9 +360,7 @@ def inject_custom_css(theme):
                 text-decoration: underline;
             }}
 
-            /* ================================================================
-               TABS  (st.tabs, used for nothing now but kept for safety)
-               ================================================================ */
+            /*  TABS */
             .stTabs [data-baseweb="tab-list"] {{
                 gap: 8px;
             }}
@@ -393,12 +377,7 @@ def inject_custom_css(theme):
                 border-bottom: 3px solid {HONEY} !important;
             }}
 
-            /* ================================================================
-               RADIO-AS-TABS  (st.radio styled to look and feel like tabs,
-               used instead of st.tabs because Streamlit's st.tabs has no
-               way to be switched programmatically from a button click —
-               st.radio's selection CAN be driven via session_state.)
-               ================================================================ */
+            /*  RADIO-AS-TABS  */
             div[role="radiogroup"] {{
                 gap: 8px;
                 border-bottom: 1px solid {theme['card_border']};
@@ -427,9 +406,7 @@ def inject_custom_css(theme):
                 display: none;
             }}
 
-            /* ================================================================
-               GENUS INFO TAB
-               ================================================================ */
+            /* GENUS INFO TAB */
             .genus-info-card {{
                 background: {theme['card_bg']};
                 border: 1px solid {theme['card_border']};
@@ -450,9 +427,7 @@ def inject_custom_css(theme):
                 color: {theme['sidebar_text']} !important;
             }}
 
-            /* ================================================================
-               PREDICT BUTTON
-               ================================================================ */
+            /* PREDICT BUTTON */
             div.stButton > button {{
                 background: linear-gradient(135deg, {HONEY} 0%, {HONEY_DARK} 100%);
                 color: {DEEP_BROWN} !important;
@@ -469,9 +444,7 @@ def inject_custom_css(theme):
                 color: {DEEP_BROWN} !important;
             }}
 
-            /* ================================================================
-               RESULT CARD
-               ================================================================ */
+            /* RESULT CARD */
             .result-card {{
                 background: linear-gradient(
                     135deg,
@@ -507,9 +480,7 @@ def inject_custom_css(theme):
                 color: {HONEY} !important;
             }}
 
-            /* ================================================================
-               FOOTER
-               ================================================================ */
+            /* FOOTER */
             .app-footer {{
                 margin-top: 3rem;
                 padding-top: 1.2rem;
@@ -532,9 +503,7 @@ def inject_custom_css(theme):
 def main():
     theme = get_theme_colors()
 
-    # --------------------------------------------------------------------
     # Img preprocessing
-    # --------------------------------------------------------------------
     def preprocess_img(beeImgFile, IMG_SIZE=416):
         rawImg = keras.utils.load_img(beeImgFile, target_size=(IMG_SIZE, IMG_SIZE))
         imgArr = keras.utils.array_to_img(rawImg)
@@ -643,9 +612,9 @@ def main():
             testImgPreds = model.predict(beeImgFile)
             display_predictions(testImgPreds, labels)
 
-    # --------------------------------------------------------------------
+
     # Page config + styling
-    # --------------------------------------------------------------------
+
     st.set_page_config(
         page_title="NBDC: Bee Identification",
         page_icon="🐝",
@@ -654,9 +623,7 @@ def main():
     )
     inject_custom_css(theme)
 
-    # --------------------------------------------------------------------
     # Hero header
-    # --------------------------------------------------------------------
     st.markdown(
         """
         <div class="hero-banner">
@@ -671,9 +638,8 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # --------------------------------------------------------------------
+   
     # Sidebar
-    # --------------------------------------------------------------------
     with st.sidebar:
         st.image("nbdc-bees.jpg", caption="NBDC Bees", use_container_width=True)
 
@@ -688,6 +654,19 @@ def main():
             """,
             unsafe_allow_html=True,
         )
+
+        # QR code — scan to open the app on any device
+        if os.path.exists("qr_code.png"):
+            st.markdown(
+                """
+                <div class="sidebar-card" style="text-align:center;">
+                    <h5>Scan to open</h5>
+                    <p style="margin-bottom:0.5rem;">Open this app on your phone or share with others</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.image("qr_code.png", use_container_width=True)
 
         st.markdown(
             """
@@ -716,9 +695,7 @@ def main():
             unsafe_allow_html=True,
         )
 
-    # --------------------------------------------------------------------
     # Tab state tracking
-    # --------------------------------------------------------------------
     if "active_tab" not in st.session_state:
         st.session_state.active_tab = None
     if "predicted_genus" not in st.session_state:
@@ -748,7 +725,7 @@ def main():
     else:
         current_section = "Genus Info"
 
-    # ---------------- TAB 1 - FILE UPLOAD ----------------
+    # TAB 1 - FILE UPLOAD 
     if current_section == "Upload File":
         st.markdown("#### Upload an image from your device")
         uploaded_file = st.file_uploader(
@@ -786,7 +763,7 @@ def main():
                 st.session_state.active_tab = None
             st.info("👆 Please upload an image file to get started.")
 
-    # ---------------- TAB 2 - IMAGE URL ----------------
+    #TAB 2 - IMAGE URL 
     elif current_section == "Image URL":
         st.markdown("#### Provide a direct image URL")
         url = st.text_input("Enter Image URL:", key="url_input", placeholder="https://example.com/bee.jpg")
@@ -832,7 +809,7 @@ def main():
                 st.session_state.active_tab = None
             st.info("👆 Please enter an image URL to get started.")
 
-    # ---------------- TAB 3 - GENUS INFO ----------------
+    # TAB 3 - GENUS INFO
     else:
         genus = st.session_state.predicted_genus
 
@@ -859,9 +836,8 @@ def main():
                     unsafe_allow_html=True,
                 )
 
-    # --------------------------------------------------------------------
+    
     # Footer
-    # --------------------------------------------------------------------
     st.markdown(
         """
         <div class="app-footer">
