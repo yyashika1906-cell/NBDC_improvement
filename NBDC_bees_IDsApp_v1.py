@@ -60,6 +60,41 @@ GENUS_MARKER_COLORS = [
 ]
 GENUS_COLOR_MAP = dict(zip(GENERA_17, GENUS_MARKER_COLORS))
 
+# Loose Alberta bounding box, used only for generating example/preview data.
+_SEED_LAT_RANGE = (48.5, 60.5)
+_SEED_LON_RANGE = (-121.0, -109.5)
+SYNTHETIC_SOURCE_TAG = "synthetic-example"
+
+
+@st.cache_data
+def generate_example_sightings(n_per_genus=25, seed=42):
+    """Synthetic example sightings so the Distribution Map isn't empty before
+    real geotagged identifications accumulate. Clearly tagged via `source` so
+    they're distinguishable from (and easy to exclude alongside) real data."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for genus in GENERA_17:
+        center_lat = rng.uniform(*_SEED_LAT_RANGE)
+        center_lon = rng.uniform(*_SEED_LON_RANGE)
+        spread_lat = rng.uniform(1.0, 3.0)
+        spread_lon = rng.uniform(1.5, 4.0)
+
+        lats = np.clip(rng.normal(center_lat, spread_lat, n_per_genus), *_SEED_LAT_RANGE)
+        lons = np.clip(rng.normal(center_lon, spread_lon, n_per_genus), *_SEED_LON_RANGE)
+        confidences = rng.uniform(0.55, 0.99, n_per_genus)
+        timestamps = pd.Timestamp.now() - pd.to_timedelta(rng.integers(0, 365, n_per_genus), unit="D")
+
+        for lat, lon, conf, ts in zip(lats, lons, confidences, timestamps):
+            rows.append({
+                "timestamp": ts.isoformat(timespec="seconds"),
+                "genus": genus,
+                "confidence": round(float(conf), 3),
+                "latitude": round(float(lat), 5),
+                "longitude": round(float(lon), 5),
+                "source": SYNTHETIC_SOURCE_TAG,
+            })
+    return pd.DataFrame(rows)[SIGHTINGS_COLUMNS]
+
 # ----------------------------------------------------------------------------
 # GENUS REFERENCE INFO
 # Concise factual summaries compiled from public bee-identification sources
@@ -1058,16 +1093,26 @@ def main():
         )
 
         sightings_df = load_sightings_log()
-        geo_df = sightings_df.copy()
-        geo_df["latitude"] = pd.to_numeric(geo_df["latitude"], errors="coerce")
-        geo_df["longitude"] = pd.to_numeric(geo_df["longitude"], errors="coerce")
-        geo_df = geo_df.dropna(subset=["latitude", "longitude"])
+        real_df = sightings_df.copy()
+        real_df["latitude"] = pd.to_numeric(real_df["latitude"], errors="coerce")
+        real_df["longitude"] = pd.to_numeric(real_df["longitude"], errors="coerce")
+        real_df = real_df.dropna(subset=["latitude", "longitude"])
+
+        include_example = st.checkbox(
+            "🧪 Include example data (synthetic, for preview — safe to turn off once real data comes in)",
+            value=True,
+            key="map_include_example",
+        )
+        example_df = generate_example_sightings() if include_example else pd.DataFrame(columns=SIGHTINGS_COLUMNS)
+
+        geo_df = pd.concat([real_df, example_df], ignore_index=True)
 
         if geo_df.empty:
             st.info(
                 "No geotagged identifications yet. Upload a specimen, expand "
                 "**'📍 Add collection location (optional)'**, tick the checkbox, and set "
-                "its coordinates — it'll show up here after the next prediction."
+                "its coordinates — it'll show up here after the next prediction. Or tick "
+                "**'Include example data'** above to preview the map with synthetic data."
             )
         else:
             genus_options = sorted(geo_df["genus"].dropna().unique().tolist())
@@ -1077,7 +1122,7 @@ def main():
                     "Filter by genus (select one or more)", genus_options, default=[], key="map_genus_filter"
                 )
             with col_count:
-                st.metric("Geotagged records", len(geo_df))
+                st.metric("Records shown", len(geo_df), help="Real + example, depending on the toggle above")
 
             show_points = st.checkbox(
                 "Include individual specimen markers as a toggleable layer", value=True, key="map_show_points"
@@ -1092,7 +1137,13 @@ def main():
                     st.warning("No records for the selected genera yet.")
                 else:
                     map_title = "All genera" if set(genus_filter) == set(genus_options) else ", ".join(genus_filter)
-                    st.markdown(f"**Density heatmap — {map_title}** ({len(plot_df)} records)")
+                    n_real = int((plot_df["source"] != SYNTHETIC_SOURCE_TAG).sum())
+                    n_example = int((plot_df["source"] == SYNTHETIC_SOURCE_TAG).sum())
+                    st.markdown(
+                        f"**Density heatmap — {map_title}** "
+                        f"({n_real} real, {n_example} example)" if include_example
+                        else f"**Density heatmap — {map_title}** ({n_real} real)"
+                    )
 
                     # --- Build the Folium map (Leaflet-based — no WebGL required) ---
                     m = folium.Map(location=[ALBERTA_CENTER["lat"], ALBERTA_CENTER["lon"]], zoom_start=5, tiles="OpenStreetMap")
@@ -1106,17 +1157,19 @@ def main():
                         points_layer = folium.FeatureGroup(name="Specimen points", show=False)
                         for _, row in plot_df.iterrows():
                             color = GENUS_COLOR_MAP.get(row["genus"], "gray")
+                            is_synthetic = row["source"] == SYNTHETIC_SOURCE_TAG
                             popup_html = (
                                 f"<b>Genus:</b> {row['genus']}<br>"
                                 f"<b>Confidence:</b> {row['confidence'] * 100:.1f}%<br>"
                                 f"<b>Timestamp:</b> {row['timestamp']}"
+                                + ("<br><i>(example data)</i>" if is_synthetic else "")
                             )
                             folium.CircleMarker(
                                 location=[row["latitude"], row["longitude"]],
                                 radius=4,
                                 color=color,
                                 fill=True,
-                                fill_opacity=0.8,
+                                fill_opacity=0.5 if is_synthetic else 0.8,
                                 popup=folium.Popup(popup_html, max_width=250),
                             ).add_to(points_layer)
                         points_layer.add_to(m)
@@ -1131,9 +1184,10 @@ def main():
                         display_df = plot_df.sort_values("timestamp", ascending=False).reset_index(drop=True).copy()
                         display_df["confidence"] = display_df["confidence"].apply(lambda c: f"{float(c) * 100:.1f}%")
                         st.dataframe(display_df, width="stretch", hide_index=True)
+                        st.caption("Export below includes real logged sightings only — example rows are excluded.")
                         st.download_button(
                             "⬇️ Download sightings CSV",
-                            data=geo_df.to_csv(index=False).encode("utf-8"),
+                            data=real_df.to_csv(index=False).encode("utf-8"),
                             file_name="bee_sightings_log.csv",
                             mime="text/csv",
                         )
