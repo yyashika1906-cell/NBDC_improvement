@@ -4,6 +4,7 @@ requests
 numpy
 pandas
 tensorflow
+tf-keras
 keras
 joblib
 plotly
