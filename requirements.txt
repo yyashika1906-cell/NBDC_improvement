@@ -1,9 +1,0 @@
-streamlit
-pillow
-requests
-numpy
-pandas
-tensorflow
-keras
-joblib
-plotly
