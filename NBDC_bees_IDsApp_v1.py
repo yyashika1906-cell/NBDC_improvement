@@ -1,4 +1,7 @@
 import os
+import base64
+import json
+import io
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_DISABLE_MKL"] = "1"
@@ -19,7 +22,6 @@ import folium
 import folium.plugins
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
-from streamlit_gsheets import GSheetsConnection
 
 
 # ----------------------------------------------------------------------------
@@ -31,15 +33,15 @@ DEEP_BROWN = "#2B1D0E"
 
 # ----------------------------------------------------------------------------
 # DISTRIBUTION MAP CONFIG
-# Sightings (genus + optional GPS coords) are stored in a Google Sheet rather
-# than local disk — Streamlit Community Cloud's filesystem is ephemeral and
-# wipes local files on every redeploy/restart, so a CSV on disk wouldn't
-# survive. Requires a `[connections.gsheets]` block in .streamlit/secrets.toml
-# (service-account credentials) and a worksheet tab named below with header
-# row: timestamp, genus, confidence, latitude, longitude, source.
-# See: https://github.com/streamlit/gsheets-connection
+# Sightings (genus + optional GPS coords) are stored as a CSV file in a small
+# GitHub repo rather than local disk — Streamlit Community Cloud's filesystem
+# is ephemeral and wipes local files on every redeploy/restart, so a CSV on
+# disk wouldn't survive. Read/written via GitHub's Contents API using a
+# personal access token — no cloud billing account needed. Requires a
+# `[github]` block in .streamlit/secrets.toml with `token` and `repo`
+# ("owner/repo-name"; use a repo separate from the one this app deploys from,
+# so pushing sightings doesn't trigger a redeploy).
 # ----------------------------------------------------------------------------
-GSHEETS_WORKSHEET = "Sightings"
 SIGHTINGS_COLUMNS = ["timestamp", "genus", "confidence", "latitude", "longitude", "source"]
 ALBERTA_CENTER = {"lat": 55.0, "lon": -115.0}
 
@@ -569,31 +571,62 @@ def inject_custom_css(theme):
     )
 
 
-def load_sightings_log():
-    """Load the persisted specimen-sighting log from the Google Sheet.
+def _github_config():
+    """Read GitHub storage config from secrets: repo (owner/name), optional
+    path/branch. Raises KeyError with a clear message if not configured."""
+    cfg = st.secrets["github"]
+    token = cfg["token"]
+    repo = cfg["repo"]  # e.g. "yashi/nbdc-bee-sightings-data"
+    path = cfg.get("path", "bee_sightings_log.csv")
+    branch = cfg.get("branch", "main")
+    return token, repo, path, branch
 
-    Returns an empty, correctly-columned DataFrame if the sheet is empty,
+
+def _github_headers(token):
+    return {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+
+
+def load_sightings_log():
+    """Load the persisted specimen-sighting log from a CSV file in a GitHub repo.
+
+    Returns an empty, correctly-columned DataFrame if the file is missing,
     unreachable, or not yet configured — callers never need to special-case it.
     """
     try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(worksheet=GSHEETS_WORKSHEET, ttl=5)
-        df = df.dropna(how="all")
+        token, repo, path, branch = _github_config()
+        url = f"https://api.github.com/repos/{repo}/contents/{path}"
+        resp = requests.get(url, headers=_github_headers(token), params={"ref": branch}, timeout=10)
+        if resp.status_code == 404:
+            return pd.DataFrame(columns=SIGHTINGS_COLUMNS)
+        resp.raise_for_status()
+        csv_text = base64.b64decode(resp.json()["content"]).decode("utf-8")
+        df = pd.read_csv(io.StringIO(csv_text))
         for col in SIGHTINGS_COLUMNS:
             if col not in df.columns:
                 df[col] = pd.NA
         return df[SIGHTINGS_COLUMNS]
     except Exception as e:
-        st.warning(f"Couldn't reach the sightings sheet: {e}")
+        st.warning(f"Couldn't reach the sightings log: {e}")
         return pd.DataFrame(columns=SIGHTINGS_COLUMNS)
 
 
 def append_sighting(genus, confidence, latitude, longitude, source):
-    """Append one identification (with its optional geolocation) to the sheet."""
+    """Append one identification (with its optional geolocation) to the GitHub-hosted CSV."""
     try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        existing = conn.read(worksheet=GSHEETS_WORKSHEET, ttl=0)
-        existing = existing.dropna(how="all")
+        token, repo, path, branch = _github_config()
+        headers = _github_headers(token)
+        url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+        resp = requests.get(url, headers=headers, params={"ref": branch}, timeout=10)
+        if resp.status_code == 200:
+            file_json = resp.json()
+            sha = file_json["sha"]
+            csv_text = base64.b64decode(file_json["content"]).decode("utf-8")
+            existing = pd.read_csv(io.StringIO(csv_text))
+        else:
+            sha = None
+            existing = pd.DataFrame(columns=SIGHTINGS_COLUMNS)
+
         new_row = pd.DataFrame([{
             "timestamp": pd.Timestamp.now().isoformat(timespec="seconds"),
             "genus": genus,
@@ -603,10 +636,16 @@ def append_sighting(genus, confidence, latitude, longitude, source):
             "source": source,
         }])
         updated = pd.concat([existing, new_row], ignore_index=True)
-        conn.update(worksheet=GSHEETS_WORKSHEET, data=updated)
-        st.cache_data.clear()
+        new_content_b64 = base64.b64encode(updated.to_csv(index=False).encode("utf-8")).decode("utf-8")
+
+        payload = {"message": f"Log sighting: {genus}", "content": new_content_b64, "branch": branch}
+        if sha:
+            payload["sha"] = sha
+
+        put_resp = requests.put(url, headers=headers, data=json.dumps(payload), timeout=10)
+        put_resp.raise_for_status()
     except Exception as e:
-        st.warning(f"Couldn't log this sighting to the sheet: {e}")
+        st.warning(f"Couldn't log this sighting: {e}")
 
 
 def main():
