@@ -703,7 +703,7 @@ def main():
         model = joblib.load(model_file)
         return model
 
-    def display_predictions(preds, labels, latitude=None, longitude=None, source=""):
+    def display_predictions(preds, labels):
         genus = []
         genusPreds = []
         for index, pred in enumerate(preds.flatten()):
@@ -721,10 +721,6 @@ def main():
 
         # --- Top-result highlight card ---
         st.session_state.predicted_genus = top_genus
-
-        if latitude is not None and longitude is not None:
-            append_sighting(top_genus, float(top_conf), float(latitude), float(longitude), source)
-            st.caption(f"📍 Logged at ({latitude:.4f}, {longitude:.4f}) — see it on the Distribution Map tab.")
 
         st.markdown(
             f"""
@@ -796,14 +792,14 @@ def main():
                 hide_index=True,
             )
 
-    def run_prediction(beeImgFile, latitude=None, longitude=None, source=""):
+    def run_prediction(beeImgFile):
         """Shared prediction routine used by both tabs."""
         try:
             with st.spinner(text='🔬 Identification in progress... please wait.'):
                 model = load_model('smoteImgBees17genus_classification_v3_model_1FullLarge1270adasynCW_9_5_26_32_416.pkl')
                 labels = joblib.load('smoteImgBees17genus_classification_v3_LABELS_1FullLarge1270adasynCW_9_5_26_32_416.pkl')
                 testImgPreds = model.predict(beeImgFile, verbose=0)
-                display_predictions(testImgPreds, labels, latitude=latitude, longitude=longitude, source=source)
+                display_predictions(testImgPreds, labels)
         except FileNotFoundError as e:
             st.error(f"Model file not found: {e}")
         except Exception as e:
@@ -954,21 +950,6 @@ def main():
                 st.write(f"**Filename:** {uploaded_file.name}")
                 st.write(f"**Size:** {image.size[0]} × {image.size[1]} px")
 
-                with st.expander("📍 Add collection location (optional)"):
-                    record_loc_file = st.checkbox(
-                        "Plot this specimen on the Distribution Map",
-                        value=False,
-                        key="loc_include_file",
-                    )
-                    loc_lat_file = st.number_input(
-                        "Latitude", value=ALBERTA_CENTER["lat"], format="%.5f",
-                        min_value=-90.0, max_value=90.0, key="loc_lat_file",
-                    )
-                    loc_lon_file = st.number_input(
-                        "Longitude", value=ALBERTA_CENTER["lon"], format="%.5f",
-                        min_value=-180.0, max_value=180.0, key="loc_lon_file",
-                    )
-
                 predict_clicked = st.button("🔍 Predict from file", key="predict_file")
 
             if uploaded_file is not None and 'predict_clicked' in locals() and predict_clicked:
@@ -977,12 +958,7 @@ def main():
                 else:
                     try:
                         beeImgFile = preprocess_img(uploaded_file)
-                        run_prediction(
-                            beeImgFile,
-                            latitude=loc_lat_file if record_loc_file else None,
-                            longitude=loc_lon_file if record_loc_file else None,
-                            source=uploaded_file.name,
-                        )
+                        run_prediction(beeImgFile)
                     except Exception as e:
                         st.error(f"Error in prediction: {e}")
         else:
@@ -1014,21 +990,6 @@ def main():
                         st.success("✅ Image loaded successfully!")
                         st.write(f"**Size:** {image.size[0]} × {image.size[1]} px")
 
-                        with st.expander("📍 Add collection location (optional)"):
-                            record_loc_url = st.checkbox(
-                                "Plot this specimen on the Distribution Map",
-                                value=False,
-                                key="loc_include_url",
-                            )
-                            loc_lat_url = st.number_input(
-                                "Latitude", value=ALBERTA_CENTER["lat"], format="%.5f",
-                                min_value=-90.0, max_value=90.0, key="loc_lat_url",
-                            )
-                            loc_lon_url = st.number_input(
-                                "Longitude", value=ALBERTA_CENTER["lon"], format="%.5f",
-                                min_value=-180.0, max_value=180.0, key="loc_lon_url",
-                            )
-
                         predict_clicked_url = st.button("🔍 Predict from URL", key="predict_url")
 
                     if predict_clicked_url:
@@ -1037,12 +998,7 @@ def main():
                         else:
                             try:
                                 beeImgFile = preprocess_img(BytesIO(response.content))
-                                run_prediction(
-                                    beeImgFile,
-                                    latitude=loc_lat_url if record_loc_url else None,
-                                    longitude=loc_lon_url if record_loc_url else None,
-                                    source=url,
-                                )
+                                run_prediction(beeImgFile)
                             except Exception as e:
                                 st.error(f"Error in prediction: {e}")
                 else:
@@ -1088,8 +1044,8 @@ def main():
     else:
         st.markdown("#### 🗺️ Wild Bee Genus Distribution — Alberta / Canada")
         st.caption(
-            "Built from every identification where a user opted to log its collection "
-            "coordinates (see the '📍 Add collection location' option on the upload tabs)."
+            "Preview data for now — this will switch to real specimen identifications "
+            "once collection-location data is available."
         )
 
         sightings_df = load_sightings_log()
@@ -1098,22 +1054,11 @@ def main():
         real_df["longitude"] = pd.to_numeric(real_df["longitude"], errors="coerce")
         real_df = real_df.dropna(subset=["latitude", "longitude"])
 
-        include_example = st.checkbox(
-            "🧪 Include example data (synthetic, for preview — safe to turn off once real data comes in)",
-            value=True,
-            key="map_include_example",
-        )
-        example_df = generate_example_sightings() if include_example else pd.DataFrame(columns=SIGHTINGS_COLUMNS)
-
+        example_df = generate_example_sightings()
         geo_df = pd.concat([real_df, example_df], ignore_index=True)
 
         if geo_df.empty:
-            st.info(
-                "No geotagged identifications yet. Upload a specimen, expand "
-                "**'📍 Add collection location (optional)'**, tick the checkbox, and set "
-                "its coordinates — it'll show up here after the next prediction. Or tick "
-                "**'Include example data'** above to preview the map with synthetic data."
-            )
+            st.info("No data available yet.")
         else:
             genus_options = sorted(geo_df["genus"].dropna().unique().tolist())
             col_filter, col_count = st.columns([2, 1])
@@ -1122,7 +1067,7 @@ def main():
                     "Filter by genus (select one or more)", genus_options, default=[], key="map_genus_filter"
                 )
             with col_count:
-                st.metric("Records shown", len(geo_df), help="Real + example, depending on the toggle above")
+                st.metric("Records shown", len(geo_df))
 
             show_points = st.checkbox(
                 "Include individual specimen markers as a toggleable layer", value=True, key="map_show_points"
@@ -1139,11 +1084,7 @@ def main():
                     map_title = "All genera" if set(genus_filter) == set(genus_options) else ", ".join(genus_filter)
                     n_real = int((plot_df["source"] != SYNTHETIC_SOURCE_TAG).sum())
                     n_example = int((plot_df["source"] == SYNTHETIC_SOURCE_TAG).sum())
-                    st.markdown(
-                        f"**Density heatmap — {map_title}** "
-                        f"({n_real} real, {n_example} example)" if include_example
-                        else f"**Density heatmap — {map_title}** ({n_real} real)"
-                    )
+                    st.markdown(f"**Density heatmap — {map_title}** ({n_real} real, {n_example} example)")
 
                     # --- Build the Folium map (Leaflet-based — no WebGL required) ---
                     m = folium.Map(location=[ALBERTA_CENTER["lat"], ALBERTA_CENTER["lon"]], zoom_start=5, tiles="OpenStreetMap")
