@@ -8,6 +8,5 @@ tf-keras
 keras
 joblib
 plotly
-st-gsheets-connection
 folium
 streamlit-folium
