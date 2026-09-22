@@ -1064,7 +1064,7 @@ def main():
             col_filter, col_count = st.columns([2, 1])
             with col_filter:
                 genus_filter = st.multiselect(
-                    "Filter by genus (select one or more)", genus_options, default=[], key="map_genus_filter"
+                    "Filter by genus (select one or more)", genus_options, default=genus_options, key="map_genus_filter"
                 )
             with col_count:
                 st.metric("Records shown", len(geo_df))
