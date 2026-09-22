@@ -1063,6 +1063,13 @@ def main():
             genus_options = sorted(geo_df["genus"].dropna().unique().tolist())
             col_filter, col_count = st.columns([2, 1])
             with col_filter:
+                btn_all, btn_none, _ = st.columns([1, 1, 3])
+                with btn_all:
+                    if st.button("Select all", key="map_select_all"):
+                        st.session_state["map_genus_filter"] = genus_options
+                with btn_none:
+                    if st.button("Clear all", key="map_clear_all"):
+                        st.session_state["map_genus_filter"] = []
                 genus_filter = st.multiselect(
                     "Filter by genus (select one or more)", genus_options, default=genus_options, key="map_genus_filter"
                 )
